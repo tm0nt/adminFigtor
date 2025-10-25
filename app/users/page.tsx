@@ -71,29 +71,29 @@ export default function UsersPage() {
     }
   }
 
-const handleExportUsers = async () => {
-  setIsExporting(true)
-  try {
-    const response = await fetch('/api/admin/users/export') // CAMINHO CORRIGIDO
-    if (!response.ok) throw new Error('Erro ao exportar')
-    
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `usuarios-${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(a)
-    a.click()
-    window.URL.revokeObjectURL(url)
-    document.body.removeChild(a)
-    
-    toast.success('Usuários exportados com sucesso!')
-  } catch (error) {
-    toast.error('Erro ao exportar usuários')
-  } finally {
-    setIsExporting(false)
+  const handleExportUsers = async () => {
+    setIsExporting(true)
+    try {
+      const response = await fetch('/api/admin/users/export')
+      if (!response.ok) throw new Error('Erro ao exportar')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `usuarios-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast.success('Usuários exportados com sucesso!')
+    } catch (error) {
+      toast.error('Erro ao exportar usuários')
+    } finally {
+      setIsExporting(false)
+    }
   }
-}
 
   const getStatusColor = (status: boolean) => {
     return status ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
@@ -107,6 +107,14 @@ const handleExportUsers = async () => {
       UNLIMITED: "bg-[#90f209]/10 text-[#90f209]",
     }
     return colors[planName] || "bg-gray-500/10 text-gray-500"
+  }
+
+  // ✅ Função helper para formatar preço com segurança
+  const formatPrice = (price: any): string => {
+    if (price === null || price === undefined) return "0,00"
+    const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price)
+    if (isNaN(numPrice)) return "0,00"
+    return numPrice.toFixed(2).replace('.', ',')
   }
 
   return (
@@ -381,7 +389,7 @@ const handleExportUsers = async () => {
                     <Activity className="w-5 h-5 text-[#90f209]" />
                     <p className="text-[#666666] text-sm">Conversões</p>
                   </div>
-                  <p className="text-[#ffffff] text-2xl font-bold">{userDetails.conversionsCount}</p>
+                  <p className="text-[#ffffff] text-2xl font-bold">{userDetails.conversionsCount || 0}</p>
                 </div>
 
                 <div className="bg-[#1a1a1a] rounded-xl p-4">
@@ -389,7 +397,7 @@ const handleExportUsers = async () => {
                     <CreditCard className="w-5 h-5 text-blue-500" />
                     <p className="text-[#666666] text-sm">Assinaturas</p>
                   </div>
-                  <p className="text-[#ffffff] text-2xl font-bold">{userDetails.subscriptionsCount}</p>
+                  <p className="text-[#ffffff] text-2xl font-bold">{userDetails.subscriptionsCount || 0}</p>
                 </div>
 
                 <div className="bg-[#1a1a1a] rounded-xl p-4">
@@ -505,7 +513,10 @@ const handleExportUsers = async () => {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-[#ffffff] text-xl font-semibold">Nova Assinatura</h3>
               <button
-                onClick={() => setShowSubscriptionModal(false)}
+                onClick={() => {
+                  setShowSubscriptionModal(false)
+                  setNewSubscription({ planId: "" })
+                }}
                 className="p-2 rounded-lg bg-[#1a1a1a] text-[#ffffff] hover:bg-[#262626] transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -523,7 +534,7 @@ const handleExportUsers = async () => {
                   <option value="">Selecione um plano</option>
                   {plans?.map((plan: any) => (
                     <option key={plan.id} value={plan.id}>
-                      {plan.displayName} - R$ {plan.priceAmount?.toFixed(2)}
+                      {plan.displayName} - R$ {formatPrice(plan.priceAmount)}
                     </option>
                   ))}
                 </select>
@@ -531,17 +542,20 @@ const handleExportUsers = async () => {
 
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={() => setShowSubscriptionModal(false)}
+                  onClick={() => {
+                    setShowSubscriptionModal(false)
+                    setNewSubscription({ planId: "" })
+                  }}
                   className="flex-1 bg-[#1a1a1a] text-[#ffffff] font-semibold py-3 rounded-xl hover:bg-[#262626] transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleCreateSubscription}
-                  disabled={!newSubscription.planId}
-                  className="flex-1 bg-[#90f209] text-[#000000] font-bold py-3 rounded-xl hover:bg-[#a0ff20] transition-all disabled:opacity-50"
+                  disabled={!newSubscription.planId || updateSubscription.isPending}
+                  className="flex-1 bg-[#90f209] text-[#000000] font-bold py-3 rounded-xl hover:bg-[#a0ff20] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Criar
+                  {updateSubscription.isPending ? "Criando..." : "Criar"}
                 </button>
               </div>
             </div>
